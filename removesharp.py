@@ -1,29 +1,35 @@
-import cv2
-import numpy as np
+import random
+from deap import base, creator, tools
 
-def remove_sharp(image, sigma=3):
-    # Convert image to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
-    # Apply Gaussian blur to reduce noise
-    blurred = cv2.GaussianBlur(gray, (0, 0), sigma)
-    
-    # Calculate the difference between original and blurred image
-    diff = cv2.subtract(gray, blurred)
-    
-    # Add the difference back to the original image to reduce sharpness
-    result = cv2.add(gray, diff)
-    
-    return result
+# Define the fitness function (example: minimize the number of white pixels)
+def fitness_function(image):
+    return sum(image),
 
-# Load the input image
-input_image = cv2.imread('input_image.jpg')
+# Create the types for the individuals and fitness
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMin)
 
-# Apply the RemoveSharp algorithm
-output_image = remove_sharp(input_image)
+# Initialize the toolbox
+toolbox = base.Toolbox()
+toolbox.register("attr_bool", random.randint, 0, 1)
+toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, n=100)  # 100 pixels in the image
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+toolbox.register("select", tools.selTournament, tournsize=3)
+toolbox.register("evaluate", fitness_function)
 
-# Display the input and output images
-cv2.imshow('Input Image', input_image)
-cv2.imshow('Output Image', output_image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# Create and evolve the population
+population = toolbox.population(n=50)
+generations = 10
+for gen in range(generations):
+    offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.2)
+    fits = toolbox.map(toolbox.evaluate, offspring)
+    for fit, ind in zip(fits, offspring):
+        ind.fitness.values = fit
+    population[:] = offspring
+
+# Get the best individual (image)
+best_individual = tools.selBest(population, k=1)[0]
+
+print("Best individual (image):", best_individual)
